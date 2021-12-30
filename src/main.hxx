@@ -13,6 +13,7 @@
 #include "dfs.hxx"
 #include "components.hxx"
 #include "sort.hxx"
+#include "dynamic.hxx"
 #include "pagerank.hxx"
 #include "pagerankSeq.hxx"
 #include "pagerankMonolithicSeq.hxx"
