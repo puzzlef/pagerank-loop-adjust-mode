@@ -1,6 +1,8 @@
 Comparing the effect of using different **functions** for
 **convergence check**, with PageRank ([pull], [CSR]).
 
+`TODO!`
+
 This experiment was for comparing the performance between:
 1. Find pagerank using **L1 norm** for convergence check.
 2. Find pagerank using **L2 norm** for convergence check.

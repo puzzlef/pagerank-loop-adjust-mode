@@ -1,8 +1,10 @@
 #pragma once
 #include <vector>
+#include <algorithm>
 #include "_main.hxx"
 
 using std::vector;
+using std::transform;
 
 
 
@@ -11,7 +13,7 @@ using std::vector;
 // --------------
 
 template <class G, class J>
-auto sourceOffsets(const G& x, J&& ks) {
+auto sourceOffsets(const G& x, const J& ks) {
   int i = 0;
   vector<int> a;
   a.reserve(x.order()+1);
@@ -34,16 +36,21 @@ auto sourceOffsets(const G& x) {
 // DESTINATION-INDICES
 // -------------------
 
-template <class G, class J>
-auto destinationIndices(const G& x, J&& ks) {
+template <class G, class J, class F>
+auto destinationIndices(const G& x, const J& ks, F fp) {
   vector<int> a;
   auto ids = indices(ks);
   for (int u : ks) {
-    for (int v : x.edges(u))
-      a.push_back(ids[v]);
-    // sort(a.end()-x.degree(u), a.end());
+    append(a, x.edges(u));
+    auto ie = a.end(), ib = ie-x.degree(u);
+    fp(ib, ie); transform(ib, ie, ib, [&](int v) { return ids[v]; });
   }
   return a;
+}
+
+template <class G, class J>
+auto destinationIndices(const G& x, const J& ks) {
+  return destinationIndices(x, ks, [](auto ib, auto ie) {});
 }
 
 template <class G>
