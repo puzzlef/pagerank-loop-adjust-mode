@@ -80,28 +80,28 @@ void runPagerankBatch(const string& data, int repeat, int skip, int batch) {
     adjustRanks(rx, Ry, ks, ksOld, 0.0f, float(Y)/(X+1), 1.0f/(X+1));
 
     // Find pagerank using L1-norm for convergence check.
-    auto b1 = pagerankMonolithicSeq(y, yt, init, {repeat, L1});
-    printRow(y, b1, b1, "I:pagerankMonolithicSeqL1Norm (static)");
-    auto c1 = pagerankMonolithicSeq(y, yt, &ry, {repeat, L1});
-    printRow(y, b1, c1, "I:pagerankMonolithicSeqL1Norm (incremental)");
-    auto d1 = pagerankMonolithicSeqDynamic(x, xt, y, yt, &ry, {repeat, L1});
-    printRow(y, b1, d1, "I:pagerankMonolithicSeqL1Norm (dynamic)");
+    auto b1 = pagerankMonolithicSeq(x, xt, init, {repeat, L1});
+    printRow(x, b1, b1, "D:pagerankMonolithicSeqL1Norm (static)");
+    auto c1 = pagerankMonolithicSeq(x, xt, &rx, {repeat, L1});
+    printRow(x, b1, c1, "D:pagerankMonolithicSeqL1Norm (incremental)");
+    auto d1 = pagerankMonolithicSeqDynamic(y, yt, x, xt, &rx, {repeat, L1});
+    printRow(x, b1, d1, "D:pagerankMonolithicSeqL1Norm (dynamic)");
 
     // Find pagerank using L2-norm for convergence check.
-    auto e1 = pagerankMonolithicSeq(y, yt, init, {repeat, L2});
-    printRow(y, b1, e1, "I:pagerankMonolithicSeqL2Norm (static)");
-    auto f1 = pagerankMonolithicSeq(y, yt, &ry, {repeat, L2});
-    printRow(y, b1, f1, "I:pagerankMonolithicSeqL2Norm (incremental)");
-    auto g1 = pagerankMonolithicSeqDynamic(x, xt, y, yt, &ry, {repeat, L2});
-    printRow(y, b1, g1, "I:pagerankMonolithicSeqL2Norm (dynamic)");
+    auto e1 = pagerankMonolithicSeq(x, xt, init, {repeat, L2});
+    printRow(x, b1, e1, "D:pagerankMonolithicSeqL2Norm (static)");
+    auto f1 = pagerankMonolithicSeq(x, xt, &rx, {repeat, L2});
+    printRow(x, b1, f1, "D:pagerankMonolithicSeqL2Norm (incremental)");
+    auto g1 = pagerankMonolithicSeqDynamic(y, yt, x, xt, &rx, {repeat, L2});
+    printRow(x, b1, g1, "D:pagerankMonolithicSeqL2Norm (dynamic)");
 
     // Find pagerank using Li-norm for convergence check.
-    auto h1 = pagerankMonolithicSeq(y, yt, init, {repeat, Li});
-    printRow(y, b1, h1, "I:pagerankMonolithicSeqLiNorm (static)");
-    auto i1 = pagerankMonolithicSeq(y, yt, &ry, {repeat, Li});
-    printRow(y, b1, i1, "I:pagerankMonolithicSeqLiNorm (incremental)");
-    auto j1 = pagerankMonolithicSeqDynamic(x, xt, y, yt, &ry, {repeat, Li});
-    printRow(y, b1, j1, "I:pagerankMonolithicSeqLiNorm (dynamic)");
+    auto h1 = pagerankMonolithicSeq(x, xt, init, {repeat, Li});
+    printRow(x, b1, h1, "D:pagerankMonolithicSeqLiNorm (static)");
+    auto i1 = pagerankMonolithicSeq(x, xt, &rx, {repeat, Li});
+    printRow(x, b1, i1, "D:pagerankMonolithicSeqLiNorm (incremental)");
+    auto j1 = pagerankMonolithicSeqDynamic(y, yt, x, xt, &rx, {repeat, Li});
+    printRow(x, b1, j1, "D:pagerankMonolithicSeqLiNorm (dynamic)");
 
     // New graph is now old.
     xo = move(yo);
