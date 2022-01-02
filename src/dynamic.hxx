@@ -54,16 +54,33 @@ void changedVerticesForEach(const G& x, const H& xt, const G& y, const H& yt, F 
     if (!x.hasVertex(u) || !verticesEqual(x, xt, u, y, yt, u)) fn(u);  // both ways
 }
 
+template <class G, class H, class F>
+void changedInVerticesForEach(const G& x, const H& xt, const G& y, const H& yt, F fn) {
+  changedVerticesForEach(xt, yt, fn);
+}
+template <class G, class H, class F>
+void changedOutVerticesForEach(const G& x, const H& xt, const G& y, const H& yt, F fn) {
+  changedVerticesForEach(x, y, fn);
+}
+
+
 template <class G>
 auto changedVertices(const G& x, const G& y) {
   vector<int> a; changedVerticesForEach(x, y, [&](int u) { a.push_back(u); });
   return a;
 }
-
 template <class G, class H>
 auto changedVertices(const G& x, const H& xt, const G& y, const H& yt) {
   vector<int> a; changedVerticesForEach(x, xt, y, yt, [&](int u) { a.push_back(u); });
   return a;
+}
+template <class G, class H>
+auto changedInVertices(const G& x, const H& xt, const G& y, const H& yt) {
+  return changedVertices(xt, yt);
+}
+template <class G, class H>
+auto changedOutVertices(const G& x, const H& xt, const G& y, const H& yt) {
+  return changedVertices(x, y);
 }
 
 
@@ -75,11 +92,11 @@ auto changedVertices(const G& x, const H& xt, const G& y, const H& yt) {
 
 template <class G, class F>
 void affectedVerticesForEach(const G& x, const G& y, F fn) {
-  auto visx = createContainer(x, bool());
-  auto visy = createContainer(y, bool());
-  auto fny  = [&](int u) { if (u>=visx.size() || !visx[u]) fn(u); };  // check bounds!
-  changedVerticesForEach(x, y, [&](int u) { if (x.hasVertex(u)) dfsDoLoop(visx, x, u, fn); });
-  changedVerticesForEach(x, y, [&](int u) { dfsDoLoop(visy, y, u, fny); });
+  vector<bool> vis(max(x.span(), y.span()));
+  changedVerticesForEach(x, y, [&](int u) {
+    if (x.hasVertex(u)) dfsDoLoop(vis, x, u, fn);
+    dfsDoLoop(vis, y, u, fn);
+  });
 }
 
 template <class G, class H, class F>
@@ -88,15 +105,37 @@ void affectedVerticesForEach(const G& x, const H& xt, const G& y, const H& yt, F
   changedVerticesForEach(x, xt, y, yt, [&](int u) { dfsDoLoop(vis, y, u, fn); });
 }
 
+template <class G, class H, class F>
+void affectedInVerticesForEach(const G& x, const H& xt, const G& y, const H& yt, F fn) {
+  auto vis = createContainer(y, bool());
+  changedInVerticesForEach(x, xt, y, yt, [&](int u) { dfsDoLoop(vis, y, u, fn); });
+}
+
+template <class G, class H, class F>
+void affectedOutVerticesForEach(const G& x, const H& xt, const G& y, const H& yt, F fn) {
+  auto vis = createContainer(y, bool());
+  changedOutVerticesForEach(x, xt, y, yt, [&](int u) { dfsDoLoop(vis, y, u, fn); });
+}
+
+
 template <class G>
 auto affectedVertices(const G& x, const G& y) {
   vector<int> a; affectedVerticesForEach(x, y, [&](int u) { a.push_back(u); });
   return a;
 }
-
 template <class G, class H>
 auto affectedVertices(const G& x, const H& xt, const G& y, const H& yt) {
   vector<int> a; affectedVerticesForEach(x, xt, y, yt, [&](int u) { a.push_back(u); });
+  return a;
+}
+template <class G, class H>
+auto affectedInVertices(const G& x, const H& xt, const G& y, const H& yt) {
+  vector<int> a; affectedInVerticesForEach(x, xt, y, yt, [&](int u) { a.push_back(u); });
+  return a;
+}
+template <class G, class H>
+auto affectedOutVertices(const G& x, const H& xt, const G& y, const H& yt) {
+  vector<int> a; affectedOutVerticesForEach(x, xt, y, yt, [&](int u) { a.push_back(u); });
   return a;
 }
 
@@ -130,6 +169,20 @@ auto dynamicVertices(const G& x, const H& xt, const G& y, const H& yt) {
   });
 }
 
+template <class G, class H>
+auto dynamicInVertices(const G& x, const H& xt, const G& y, const H& yt) {
+  return dynamicVerticesBy(y, [&](auto fn) {
+    affectedInVerticesForEach(x, xt, y, yt, fn);
+  });
+}
+
+template <class G, class H>
+auto dynamicOutVertices(const G& x, const H& xt, const G& y, const H& yt) {
+  return dynamicVerticesBy(y, [&](auto fn) {
+    affectedOutVerticesForEach(x, xt, y, yt, fn);
+  });
+}
+
 
 
 
@@ -149,16 +202,33 @@ void changedComponentIndicesForEach(const G& x, const H& xt, const G& y, const H
     if (!componentsEqual(x, xt, cs[i], y, yt, cs[i])) fn(i);  // both ways
 }
 
+template <class G, class H, class F>
+void changedInComponentIndicesForEach(const G& x, const H& xt, const G& y, const H& yt, const vector2d<int>& cs, F fn) {
+  return changedComponentIndicesForEach(xt, yt, cs, fn);
+}
+template <class G, class H, class F>
+void changedOutComponentIndicesForEach(const G& x, const H& xt, const G& y, const H& yt, const vector2d<int>& cs, F fn) {
+  return changedComponentIndicesForEach(x, y, cs, fn);
+}
+
+
 template <class G>
 auto changedComponentIndices(const G& x, const G& y, const vector2d<int>& cs) {
   vector<int> a; changedComponentIndicesForEach(x, y, cs, [&](int u) { a.push_back(u); });
   return a;
 }
-
 template <class G, class H>
 auto changedComponentIndices(const G& x, const H& xt, const G& y, const H& yt, const vector2d<int>& cs) {
   vector<int> a; changedVerticesForEach(x, xt, y, yt, cs, [&](int u) { a.push_back(u); });
   return a;
+}
+template <class G, class H>
+auto changedInComponentIndices(const G& x, const H& xt, const G& y, const H& yt, const vector2d<int>& cs) {
+  return changedComponentIndices(xt, yt, cs);
+}
+template <class G, class H>
+auto changedOutComponentIndices(const G& x, const H& xt, const G& y, const H& yt, const vector2d<int>& cs) {
+  return changedComponentIndices(x, y, cs);
 }
 
 
@@ -180,15 +250,37 @@ void affectedComponentIndicesForEach(const G& x, const H& xt, const G& y, const 
   changedComponentIndicesForEach(x, xt, y, yt, cs, [&](int u) { dfsDoLoop(vis, b, u, fn); });
 }
 
+template <class G, class H, class B, class F>
+void affectedInComponentIndicesForEach(const G& x, const H& xt, const G& y, const H& yt, const vector2d<int>& cs, const B& b, F fn) {
+  auto vis = createContainer(b, bool());
+  changedInComponentIndicesForEach(x, xt, y, yt, cs, [&](int u) { dfsDoLoop(vis, b, u, fn); });
+}
+
+template <class G, class H, class B, class F>
+void affectedOutComponentIndicesForEach(const G& x, const H& xt, const G& y, const H& yt, const vector2d<int>& cs, const B& b, F fn) {
+  auto vis = createContainer(b, bool());
+  changedOutComponentIndicesForEach(x, xt, y, yt, cs, [&](int u) { dfsDoLoop(vis, b, u, fn); });
+}
+
+
 template <class G, class B>
 auto affectedComponentIndices(const G& x, const G& y, const vector2d<int>& cs, const B& b) {
   vector<int> a; affectedComponentIndicesForEach(x, y, cs, b, [&](int u) { a.push_back(u); });
   return a;
 }
-
 template <class G, class H, class B>
 auto affectedComponentIndices(const G& x, const H& xt, const G& y, const H& yt, const vector2d<int>& cs, const B& b) {
   vector<int> a; affectedComponentIndicesForEach(x, xt, y, yt, cs, b, [&](int u) { a.push_back(u); });
+  return a;
+}
+template <class G, class H, class B>
+auto affectedInComponentIndices(const G& x, const H& xt, const G& y, const H& yt, const vector2d<int>& cs, const B& b) {
+  vector<int> a; affectedInComponentIndicesForEach(x, xt, y, yt, cs, b, [&](int u) { a.push_back(u); });
+  return a;
+}
+template <class G, class H, class B>
+auto affectedOutComponentIndices(const G& x, const H& xt, const G& y, const H& yt, const vector2d<int>& cs, const B& b) {
+  vector<int> a; affectedOutComponentIndicesForEach(x, xt, y, yt, cs, b, [&](int u) { a.push_back(u); });
   return a;
 }
 
@@ -219,5 +311,19 @@ template <class G, class H, class B>
 auto dynamicComponentIndices(const G& x, const H& xt, const G& y, const H& yt, const vector2d<int>& cs, const B& b) {
   return dynamicComponentIndicesBy(y, cs, [&](auto fn) {
     affectedComponentIndicesForEach(x, xt, y, yt, cs, b, fn);
+  });
+}
+
+template <class G, class H, class B>
+auto dynamicInComponentIndices(const G& x, const H& xt, const G& y, const H& yt, const vector2d<int>& cs, const B& b) {
+  return dynamicComponentIndicesBy(y, cs, [&](auto fn) {
+    affectedInComponentIndicesForEach(x, xt, y, yt, cs, b, fn);
+  });
+}
+
+template <class G, class H, class B>
+auto dynamicOutComponentIndices(const G& x, const H& xt, const G& y, const H& yt, const vector2d<int>& cs, const B& b) {
+  return dynamicComponentIndicesBy(y, cs, [&](auto fn) {
+    affectedOutComponentIndicesForEach(x, xt, y, yt, cs, b, fn);
   });
 }

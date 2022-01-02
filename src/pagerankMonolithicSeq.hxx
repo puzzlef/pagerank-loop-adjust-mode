@@ -65,6 +65,7 @@ template <class G, class H, class T=float>
 PagerankResult<T> pagerankMonolithicSeqDynamic(const G& x, const H& xt, const G& y, const H& yt, const vector<T> *q=nullptr, const PagerankOptions<T>& o={}) {
   int  N = yt.order();                           if (N==0) return PagerankResult<T>::initial(yt, q);
   auto [ks, n] = dynamicVertices(x, xt, y, yt);  if (n==0) return PagerankResult<T>::initial(yt, q);
+  if (anyOf(sliceIter(ks, 0, n), [&](int u) { return isDeadEnd(y, u); })) n = ks.size();  // teleport affects all!
   return pagerankSeq(yt, ks, 0, n, pagerankMonolithicSeqLoop<T>, q, o);
 }
 
