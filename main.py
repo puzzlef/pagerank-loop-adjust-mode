@@ -1,7 +1,7 @@
-# https://www.kaggle.com/wolfram77/puzzlef-pagerank-adjust-mode
+# https://www.kaggle.com/wolfram77/puzzlef-pagerank-loop-adjust-mode
 import os
 from IPython.display import FileLink
-src="pagerank-adjust-mode"
+src="pagerank-loop-adjust-mode"
 inp="/kaggle/input/graphs"
 out="{}.txt".format(src)
 !printf "" > "$out"
