@@ -15,7 +15,7 @@ using namespace std;
 template <class G, class T>
 void printRow(const G& x, const PagerankResult<T>& a, const PagerankResult<T>& b, const char *tec) {
   auto e = l1Norm(b.ranks, a.ranks);
-  print(x); printf(" [%09.3f ms; %03d iters.] [%.4e err.] %s\n", b.time, b.iterations, e, tec);
+  print(x); printf(" [%09.3f ms; %05.1f iters.; %.2e skip] [%.4e err.] %s\n", b.time, b.iterations, b.skip, e, tec);
 }
 
 void runPagerankBatch(const string& data, int repeat, int skip, int batch) {
@@ -31,8 +31,8 @@ void runPagerankBatch(const string& data, int repeat, int skip, int batch) {
     if (skip>0 && !readSnapTemporal(xo, s, skip)) break;
     auto x  = selfLoop(xo, [&](int u) { return isDeadEnd(xo, u); });
     auto xt = transposeWithDegree(x);
-    auto ksOld = vertices(x);
-    auto a0 = pagerankMonolithicSeq(x, xt, init, {repeat});
+    auto Kx = vertices(x);
+    auto a0 = pagerankMonolithicSeq(x, xt, init);
     auto Rx = a0.ranks;
 
     // Read edges for this batch.
@@ -40,14 +40,14 @@ void runPagerankBatch(const string& data, int repeat, int skip, int batch) {
     if (!readSnapTemporal(yo, s, batch)) break;
     auto y  = selfLoop(yo, [&](int u) { return isDeadEnd(yo, u); });
     auto yt = transposeWithDegree(y);
-    auto ks = vertices(y);
+    auto Ky = vertices(y);
     vector<T> ry(y.span());
-    int X = ksOld.size();
-    int Y = ks.size();
+    int X = Kx.size();
+    int Y = Ky.size();
 
     // INSERTIONS:
     // Adjust ranks for insertions.
-    adjustRanks(ry, Rx, ksOld, ks, 0.0f, float(X)/(Y+1), 1.0f/(Y+1));
+    adjustRanks(ry, Rx, Kx, Ky, 0.0f, float(X)/(Y+1), 1.0f/(Y+1));
 
     // Find pagerank using L1-norm for convergence check.
     auto b0 = pagerankMonolithicSeq(y, yt, init, {repeat, L1});
@@ -77,7 +77,7 @@ void runPagerankBatch(const string& data, int repeat, int skip, int batch) {
     // Adjust ranks for deletions.
     auto Ry = b0.ranks;
     vector<T> rx(x.span());
-    adjustRanks(rx, Ry, ks, ksOld, 0.0f, float(Y)/(X+1), 1.0f/(X+1));
+    adjustRanks(rx, Ry, Ky, Kx, 0.0f, float(Y)/(X+1), 1.0f/(X+1));
 
     // Find pagerank using L1-norm for convergence check.
     auto b1 = pagerankMonolithicSeq(x, xt, init, {repeat, L1});
@@ -104,7 +104,7 @@ void runPagerankBatch(const string& data, int repeat, int skip, int batch) {
     printRow(x, b1, j1, "D:pagerankMonolithicSeqLiNorm (dynamic)");
 
     // New graph is now old.
-    xo = move(yo);
+    x = move(y);
   }
 }
 
@@ -126,6 +126,6 @@ int main(int argc, char **argv) {
   printf("Using graph %s ...\n", file);
   string d = readFile(file);
   runPagerank(d, repeat);
-    printf("\n");
+  printf("\n");
   return 0;
 }

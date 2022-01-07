@@ -20,13 +20,10 @@ using std::make_pair;
 // For calculating inital ranks for incremental/dynamic pagerank.
 
 template <class T, class J>
-void adjustRanks(vector<T>& a, const vector<T>& r, const J& ks0, const J& ks1, T radd, T rmul, T rset) {
-  unordered_set<int> kt0(ks0.begin(), ks0.end());
-  unordered_set<int> kt1(ks1.begin(), ks1.end());
-  for (int k : ks0)
-    if (kt1.count(k)>0)  a[k] = (r[k]+radd)*rmul;  // if vertex not removed
-  for (int k : ks1)
-    if (kt0.count(k)==0) a[k] = rset;              // if vertex added
+void adjustRanks(vector<T>& a, const vector<T>& r, const J& Kx, const J& Ky, T radd, T rmul, T rset) {
+  unordered_set<int> Sx(Kx.begin(), Kx.end());
+  for (int u : Ky)
+    a[u] = Sx.count(u)==0? rset : (r[u]+radd)*rmul;  // vertex new/old
 }
 
 template <class T, class J>
@@ -42,45 +39,35 @@ auto adjustRanks(int N, const vector<T>& r, const J& ks0, const J& ks1, T radd, 
 // ----------------
 // Find vertices with edges added/removed.
 
+template <class G>
+bool isChangedVertex(const G& x, const G& y, int u) {
+  return !x.hasVertex(u) || !verticesEqual(x, u, y, u);
+}
+template <class G, class H>
+bool isChangedVertex(const G& x, const H& xt, const G& y, const H& yt, int u) {
+  return !x.hasVertex(u) || !verticesEqual(x, xt, u, y, yt, u);  // both ways
+}
+
 template <class G, class F>
-void changedVerticesForEach(const G& x, const G& y, F fn) {
+void changedVerticesDo(const G& x, const G& y, F fn) {
   for (int u : y.vertices())
-    if (!x.hasVertex(u) || !verticesEqual(x, u, y, u)) fn(u);
+    if (isChangedVertex(x, y, u)) fn(u);
 }
-
 template <class G, class H, class F>
-void changedVerticesForEach(const G& x, const H& xt, const G& y, const H& yt, F fn) {
+void changedVerticesDo(const G& x, const H& xt, const G& y, const H& yt, F fn) {
   for (int u : y.vertices())
-    if (!x.hasVertex(u) || !verticesEqual(x, xt, u, y, yt, u)) fn(u);  // both ways
+    if (isChangedVertex(x, xt, y, yt, u)) fn(u);
 }
-
-template <class G, class H, class F>
-void changedInVerticesForEach(const G& x, const H& xt, const G& y, const H& yt, F fn) {
-  changedVerticesForEach(xt, yt, fn);
-}
-template <class G, class H, class F>
-void changedOutVerticesForEach(const G& x, const H& xt, const G& y, const H& yt, F fn) {
-  changedVerticesForEach(x, y, fn);
-}
-
 
 template <class G>
 auto changedVertices(const G& x, const G& y) {
-  vector<int> a; changedVerticesForEach(x, y, [&](int u) { a.push_back(u); });
+  vector<int> a; changedVerticesDo(x, y, [&](int u) { a.push_back(u); });
   return a;
 }
 template <class G, class H>
 auto changedVertices(const G& x, const H& xt, const G& y, const H& yt) {
-  vector<int> a; changedVerticesForEach(x, xt, y, yt, [&](int u) { a.push_back(u); });
+  vector<int> a; changedVerticesDo(x, xt, y, yt, [&](int u) { a.push_back(u); });
   return a;
-}
-template <class G, class H>
-auto changedInVertices(const G& x, const H& xt, const G& y, const H& yt) {
-  return changedVertices(xt, yt);
-}
-template <class G, class H>
-auto changedOutVertices(const G& x, const H& xt, const G& y, const H& yt) {
-  return changedVertices(x, y);
 }
 
 
@@ -90,52 +77,76 @@ auto changedOutVertices(const G& x, const H& xt, const G& y, const H& yt) {
 // -----------------
 // Find vertices reachable from changed vertices.
 
-template <class G, class F>
-void affectedVerticesForEach(const G& x, const G& y, F fn) {
-  vector<bool> vis(max(x.span(), y.span()));
-  changedVerticesForEach(x, y, [&](int u) {
-    if (x.hasVertex(u)) dfsDoLoop(vis, x, u, fn);
-    dfsDoLoop(vis, y, u, fn);
-  });
+template <class G>
+bool hasAffectedDeadEnd(const G& x, const G& y, const vector<bool>& vis) {
+  for (int u : x.vertices())
+    if (isDeadEnd(x, u) && !y.hasVertex(u)) return true;
+  for (int u : y.vertices())
+    if (isDeadEnd(y, u) && vis[u]) return true;
+  return false;
 }
 
-template <class G, class H, class F>
-void affectedVerticesForEach(const G& x, const H& xt, const G& y, const H& yt, F fn) {
-  auto vis = createContainer(y, bool());
-  changedVerticesForEach(x, xt, y, yt, [&](int u) { dfsDoLoop(vis, y, u, fn); });
+
+template <class G, class H>
+bool affectedVerticesMark(vector<bool>& vis, const G& x, const H& xt, const G& y, const H& yt) {
+  changedVerticesDo(x, xt, y, yt, [&](int u) { dfsMarkLoop(vis, y, u); });
+  return hasAffectedDeadEnd(x, y, vis);
 }
 
-template <class G, class H, class F>
-void affectedInVerticesForEach(const G& x, const H& xt, const G& y, const H& yt, F fn) {
-  auto vis = createContainer(y, bool());
-  changedInVerticesForEach(x, xt, y, yt, [&](int u) { dfsDoLoop(vis, y, u, fn); });
+template <class G, class H>
+bool affectedInVerticesMark(vector<bool>& vis, const G& x, const H& xt, const G& y, const H& yt) {
+  changedVerticesDo(xt, yt, [&](int u) { dfsMarkLoop(vis, y, u); });
+  return hasAffectedDeadEnd(x, y, vis);
 }
-
-template <class G, class H, class F>
-void affectedOutVerticesForEach(const G& x, const H& xt, const G& y, const H& yt, F fn) {
-  auto vis = createContainer(y, bool());
-  changedOutVerticesForEach(x, xt, y, yt, [&](int u) { dfsDoLoop(vis, y, u, fn); });
-}
-
 
 template <class G>
-auto affectedVertices(const G& x, const G& y) {
-  vector<int> a; affectedVerticesForEach(x, y, [&](int u) { a.push_back(u); });
-  return a;
+bool affectedOutVerticesMark(vector<bool>& vis, const G& x, const G& y) {
+  changedVerticesDo(x, y, [&](int u) { dfsMarkLoop(vis, y, u); });
+  return hasAffectedDeadEnd(x, y, vis);
 }
+
+
+template <class G, class F>
+void affectedVerticesDoInt(const G& x, const G& y, const vector<bool>& vis, F fn) {
+  if (hasAffectedDeadEnd(x, y, vis)) forEach(y.vertices(), fn);
+  else forEach(y.vertices(), [&](int u) { if (vis[u]) fn(u); });
+}
+
+template <class G, class H, class F>
+void affectedVerticesDo(const G& x, const H& xt, const G& y, const H& yt, F fn) {
+  auto vis = createContainer(y, bool());
+  changedVerticesDo(x, xt, y, yt, [&](int u) { dfsMarkLoop(vis, y, u); });
+  affectedVerticesDoInt(x, y, vis, fn);
+}
+
+template <class G, class H, class F>
+void affectedInVerticesDo(const G& x, const H& xt, const G& y, const H& yt, F fn) {
+  auto vis = createContainer(y, bool());
+  changedVerticesDo(xt, yt, [&](int u) { dfsMarkLoop(vis, y, u); });
+  affectedVerticesDoInt(x, y, vis, fn);
+}
+
+template <class G, class H, class F>
+void affectedOutVerticesDo(const G& x, const G& y, F fn) {
+  auto vis = createContainer(y, bool());
+  changedVerticesDo(x, y, [&](int u) { dfsMarkLoop(vis, y, u); });
+  affectedVerticesDoInt(x, y, vis, fn);
+}
+
+
 template <class G, class H>
 auto affectedVertices(const G& x, const H& xt, const G& y, const H& yt) {
-  vector<int> a; affectedVerticesForEach(x, xt, y, yt, [&](int u) { a.push_back(u); });
+  vector<int> a; affectedVerticesDo(x, xt, y, yt, [&](int u) { a.push_back(u); });
   return a;
 }
 template <class G, class H>
 auto affectedInVertices(const G& x, const H& xt, const G& y, const H& yt) {
-  vector<int> a; affectedInVerticesForEach(x, xt, y, yt, [&](int u) { a.push_back(u); });
+  vector<int> a; affectedInVerticesDo(x, xt, y, yt, [&](int u) { a.push_back(u); });
   return a;
 }
-template <class G, class H>
-auto affectedOutVertices(const G& x, const H& xt, const G& y, const H& yt) {
-  vector<int> a; affectedOutVerticesForEach(x, xt, y, yt, [&](int u) { a.push_back(u); });
+template <class G>
+auto affectedOutVertices(const G& x, const G& y) {
+  vector<int> a; affectedOutVerticesDo(x, y, [&](int u) { a.push_back(u); });
   return a;
 }
 
@@ -146,6 +157,17 @@ auto affectedOutVertices(const G& x, const H& xt, const G& y, const H& yt) {
 // ----------------
 // Find affected, unaffected vertices (vertices, no. affected).
 
+
+template <class G, class FA>
+auto dynamicVerticesByMark(const G& y, FA fa) {
+  auto vis = createContainer(y, bool());
+  if(fa(vis)) return make_pair(vertices(y), y.order());
+  vector<int> a; int n = 0;
+  for (int u : y.vertices())
+    if (vis[u]) { a.push_back(u); ++n; }
+  return make_pair(a, n);
+}
+
 template <class G, class FA>
 auto dynamicVerticesBy(const G& y, FA fa) {
   vector<int> a; unordered_set<int> aff;
@@ -155,39 +177,25 @@ auto dynamicVerticesBy(const G& y, FA fa) {
   return make_pair(a, aff.size());
 }
 
-template <class G>
-auto dynamicVertices(const G& x, const G& y) {
-  return dynamicVerticesBy(y, [&](auto fn) {
-    affectedVerticesForEach(x, y, fn);
-  });
-}
 
 template <class G, class H>
 auto dynamicVertices(const G& x, const H& xt, const G& y, const H& yt) {
-  return dynamicVerticesBy(y, [&](auto fn) {
-    affectedVerticesForEach(x, xt, y, yt, fn);
-  });
+  return dynamicVerticesByMark(y, [&](auto& vis) { return affectedVerticesMark(vis, x, xt, y, yt); });
 }
-
 template <class G, class H>
 auto dynamicInVertices(const G& x, const H& xt, const G& y, const H& yt) {
-  return dynamicVerticesBy(y, [&](auto fn) {
-    affectedInVerticesForEach(x, xt, y, yt, fn);
-  });
+  return dynamicVerticesByMark(y, [&](auto& vis) { return affectedInVerticesMark(vis, x, xt, y, yt); });
 }
-
-template <class G, class H>
-auto dynamicOutVertices(const G& x, const H& xt, const G& y, const H& yt) {
-  return dynamicVerticesBy(y, [&](auto fn) {
-    affectedOutVerticesForEach(x, xt, y, yt, fn);
-  });
+template <class G>
+auto dynamicOutVertices(const G& x, const G& y) {
+  return dynamicVerticesByMark(y, [&](auto& vis) { return affectedOutVerticesMark(vis, x, y); });
 }
 
 
 
 
-// CHANGED-COMPONENTS
-// ------------------
+// CHANGED-COMPONENTS (TOFIX!)
+// ---------------------------
 // Find components with edges added/removed.
 
 template <class G, class F>

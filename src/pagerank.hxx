@@ -32,14 +32,15 @@ struct PagerankOptions {
 template <class T>
 struct PagerankResult {
   vector<T> ranks;
-  int   iterations;
+  float iterations;
   float time;
+  float skip;
 
-  PagerankResult(vector<T>&& ranks, int iterations=0, float time=0) :
-  ranks(ranks), iterations(iterations), time(time) {}
+  PagerankResult(vector<T>&& ranks, float iterations=0, float time=0, float skip=0) :
+  ranks(ranks), iterations(iterations), time(time), skip(skip) {}
 
-  PagerankResult(vector<T>& ranks, int iterations=0, float time=0) :
-  ranks(move(ranks)), iterations(iterations), time(time) {}
+  PagerankResult(vector<T>& ranks, float iterations=0, float time=0, float skip=0) :
+  ranks(move(ranks)), iterations(iterations), time(time), skip(skip) {}
 
 
   // Get initial ranks (when no vertices affected for dynamic pagerank).

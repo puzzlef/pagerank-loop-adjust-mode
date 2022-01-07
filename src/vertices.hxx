@@ -1,10 +1,12 @@
 #pragma once
 #include <vector>
+#include <unordered_set>
 #include <iterator>
 #include <algorithm>
 #include "_main.hxx"
 
 using std::vector;
+using std::unordered_set;
 using std::transform;
 using std::back_inserter;
 using std::equal;
@@ -32,6 +34,25 @@ auto vertices(const G& x, F fm) {
 template <class G>
 auto vertices(const G& x) {
   return vertices(x, [](int u) { return u; });
+}
+
+
+
+
+// VERTEX-SET
+// ----------
+
+template <class G, class F, class D>
+auto vertexSet(const G& x, F fm) {
+  unordered_set<int> a;
+  for (int u : x.vertices())
+    a.insert(fm(u));
+  return a;
+}
+
+template <class G>
+auto vertexSet(const G& x) {
+  return vertexSet(x, [](int u) { return u; });
 }
 
 
@@ -143,5 +164,5 @@ bool verticesEqual(const G& x, int u, const G& y, int v) {
 
 template <class G, class H>
 bool verticesEqual(const G& x, const H& xt, int u, const G& y, const H& yt, int v) {
-  return verticesEqual(x, u, y, u) && verticesEqual(xt, u, yt, u);
+  return verticesEqual(x, u, y, v) && verticesEqual(xt, u, yt, v);
 }
